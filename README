@@ -1,0 +1,66 @@
+nvidia-weston - wayland compositor that can work with nvidia blob
+
+
+The only thing wayland needed is a way to share buffers.
+
+Currently the reference implementation uses EGL(with wayland
+extension) to render, switch to another render api is painful and
+useless.
+
+The only reason that NVIDIA can't cooperate with weston is that, they
+don't provide EGL implementation with wayland extension.
+
+NVIDIA blob doesn't provide libEGL.so right? We can implement stubs
+that wraps libEGL to NVIDIA blob's  libGL.so as a way of building  EGL
+wayland platform on top of NVIDIA blob.
+
+What about KMS ?
+
+Let the blob DDX do the job! We fire up an X server with uses NVIDIA
+blob but with no input to be used by weston. weston create an
+FULLSCREEN GLX window( for mutil monitor, create every fullscreen
+window for every monitor)  and uses that as  output surface.
+Note, this X have no support for input device, and can be specify
+builded for use with weston only.  since we create a fullscreen window
+and do direct rendering, the X layer won't hurt us much. And weston
+didn't get input from X, so no input latency.
+
+What about BUFFER SHARE?
+
+Currently we can use shm, in time NVIDIA(hopefully) will add an GL
+extension that allow us to create share-able buffers among different
+processes. Then we can use that extension instead.
+
+Why not just use X?
+Well, in this way, we can have a working wayland on top of NVIDIA
+blob. So developers/distros won't have to deal with X11 and can start
+migration to wayland right away long before the eval NVIDIA make the
+right choice.
+
+In this way, we eliminated the last Barrier that bind us to X, the blob.
+
+The above idea also apply to ATI blob.
+
+
+
+For NVIDIA blob to work, we need three things to happen:
+
+1) weston side:
+         x11-backend will be changed as glx-backend
+	  to only use X for draw, get input directly though /dev/input/event*
+         weston-launch detects an NVIDIA card and NVIDIA blob present,
+launches a special builded X and run weston inside that X.
+
+2) xorg side:
+        able to build a minimal X that has only the ability to load
+video drivers and creat GLX window.
+        no input drivers
+       no input support
+       no  core X render api support
+       no font support
+       no extensions except GLX
+
+
+3) Mesa side
+       use glx to implement EGL and wayland platform.
+
