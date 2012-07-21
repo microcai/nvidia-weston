@@ -1,5 +1,5 @@
 
-CPPFLAGS += -fPIC
+AM_CPPFLAGS = -fPIC
 
 noinst_LIBRARIES = libEGL_platform.a
 
